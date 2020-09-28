@@ -200,7 +200,7 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
     (projectile-project-name)))
 
 (defun tasklist--task-buffer-name (task-id)
-  (concat "*Task: " (tasklist-project-name) "/" (tasklist--get-task-name task-id) "*"))
+  (concat "*Task: " (tasklist-project-name) "/" (tasklist--get-task-window task-id) "*"))
 
 (defun tasklist--get-project-data ()
   (tasklist--read-project-data))
@@ -220,6 +220,11 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
   (let ((task (tasklist--get-task task-id)))
     (or (cadr (assoc :name task))
         (symbol-name task-id))))
+
+(defun tasklist--get-task-window (task-id)
+  (let ((task (tasklist--get-task task-id)))
+    (or (cadr (assoc :window task))
+        (tasklist--get-task-name task-id))))
 
 (defun tasklist-get-task-cwd (task-id)
   (let* ((task (tasklist--get-task task-id))
