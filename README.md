@@ -31,6 +31,14 @@ For now there isn't much configuration beyond the above.  Commands are in the fo
 
 The `:name` is just a "pretty" name to display, and not strictly necessary.  If `:cwd` is specified, if it's `file-absolute-p`, it will be treated as an absolute path, otherwise will be relative to the project root (as determined by `projectile-project-root`).
 
+There is also `:window`:
+
+```lisp
+(:window "Name")
+```
+
+This will call the *buffer* `*Task: Project/Name*`.  By using the same name for multiple tasks, you can cause the window to be shared/reused.  (By default, the given `:name` is used for each task.)
+
 ## Binding keys
 
 If you want to bind keys, you can put things in your `init.el` or wherever (but, obviously not in `.tasklist.el`):
