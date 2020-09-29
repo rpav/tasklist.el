@@ -284,7 +284,7 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
             display-buffer-alist))
          (actual-directory default-directory))
     (if (get-buffer-process buffer-name)
-        (message "Already running %s" buffer-name)
+        (message "Already running task in window: %s" buffer-name)
       (with-current-buffer buffer-name
         (setq-local compilation-directory actual-directory)
         (setq-local default-directory actual-directory))
