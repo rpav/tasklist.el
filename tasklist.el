@@ -231,10 +231,10 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
          (root (tasklist--project-root))
          (cwd (cadr (assoc :cwd task))))
     (if cwd
-     (if (file-name-absolute-p cwd)
-         cwd
-       (concat root cwd))
-     root)))
+        (if (file-name-absolute-p cwd)
+            cwd
+          (concat root cwd))
+      root)))
 
 (defun tasklist--get-task-command (task-id)
   (let* ((task (tasklist--get-task task-id))
@@ -274,8 +274,15 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
     (split (tasklist--split-to-buffer name))
     (frame (tasklist--popup-buffer name))))
 
+(defun tasklist--buffer-filter (process output buffer)
+  (let* ((max (buffer-size buffer)))
+    (dolist (w (get-buffer-window-list buffer nil t))
+      (with-selected-window w (set-window-point w (1+ max)))
+      (with-current-buffer buffer (goto-char (1+ max))))))
+
 (cl-defun tasklist--invoke (buffer-name command &key sentinel)
   (let* ((did-split (tasklist--display-buffer buffer-name))
+         (buffer (get-buffer buffer-name))
          (display-buffer-alist
           ;; Suppress the window only if we actually split
           (if did-split
@@ -283,26 +290,28 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
                     display-buffer-alist)
             display-buffer-alist))
          (actual-directory default-directory))
-    (if (get-buffer-process buffer-name)
-        (message "Already running task in window: %s" buffer-name)
-      (with-current-buffer buffer-name
+    (if (get-buffer-process buffer)
+        (message "Already running task in window: %s" buffer)
+      (with-current-buffer buffer
         (setq-local compilation-directory actual-directory)
         (setq-local default-directory actual-directory))
       ;; compile saves buffers; rely on this now
-      (let* ((compilation-buffer-name-function (lambda (&rest r) buffer-name)))
+      (let* ((compilation-buffer-name-function (lambda (&rest r) buffer)))
         (cl-flet ((run-compile () (compile (concat "time " command))))
-          (let ((w (get-buffer-window buffer-name t)))
+          (let ((w (get-buffer-window buffer t)))
             (if (and w (not (eql (get-buffer-window) w)))
                 (with-selected-window w
                   (run-compile))
               (run-compile))))
-        (when sentinel
-          (let ((process (get-buffer-process buffer-name)))
-            (when (process-live-p process)
-              (set-process-sentinel process
-                                    (lambda (p e)
-                                      (funcall sentinel p e)
-                                      (compilation-sentinel p e))))))
+        (let* ((process (get-buffer-process buffer))
+               (old-filter (process-filter process))
+               (old-sentinel (process-sentinel process)))
+          (set-process-sentinel process (lambda (p e)
+                                          (when sentinel (funcall sentinel p e))
+                                          (funcall old-sentinel p e)))
+          (set-process-filter process (lambda (p o)
+                                        (funcall old-filter p o)
+                                        (tasklist--buffer-filter p o buffer))))
         (with-current-buffer buffer-name
           (mapcar (lambda (w)
                     (set-window-point w (point-max)))
