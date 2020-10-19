@@ -236,6 +236,11 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
           (concat root cwd))
       root)))
 
+(defun tasklist--get-task-display-type (task-id)
+  (let ((task (tasklist--get-task task-id)))
+    (or (cadr (assoc :display task))
+        tasklist-display-type)))
+
 (defun tasklist--get-task-command (task-id)
   (let* ((task (tasklist--get-task task-id))
          (cmd (cdr (assoc :command task))))
@@ -269,10 +274,16 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
       (raise-frame (window-frame (get-buffer-window buffer t))))
     t))
 
-(defun tasklist--display-buffer (name)
-  (case tasklist-display-type
-    (split (tasklist--split-to-buffer name))
-    (frame (tasklist--popup-buffer name))))
+(defun tasklist--background-buffer (name)
+  (get-buffer-create name)
+  nil)
+
+(defun tasklist--display-buffer (task-id buffer-name)
+  (let* ((display-type (tasklist--get-task-display-type task-id)))
+    (case display-type
+      (split (tasklist--split-to-buffer buffer-name))
+      (frame (tasklist--popup-buffer buffer-name))
+      (none (tasklist--background-buffer buffer-name)))))
 
 (defun tasklist--buffer-filter (process output buffer)
   (let* ((max (buffer-size buffer)))
@@ -280,8 +291,8 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
       (with-selected-window w (set-window-point w (1+ max)))
       (with-current-buffer buffer (goto-char (1+ max))))))
 
-(cl-defun tasklist--invoke (buffer-name command &key sentinel)
-  (let* ((did-split (tasklist--display-buffer buffer-name))
+(cl-defun tasklist--invoke (task-id buffer-name command &key sentinel)
+  (let* ((did-split (tasklist--display-buffer task-id buffer-name))
          (buffer (get-buffer buffer-name))
          (display-buffer-alist
           ;; Suppress the window only if we actually split
@@ -297,7 +308,9 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
         (setq-local default-directory actual-directory))
       ;; compile saves buffers; rely on this now
       (let* ((compilation-buffer-name-function (lambda (&rest r) buffer)))
-        (cl-flet ((run-compile () (compile (concat "time " command))))
+        (cl-flet ((run-compile ()
+                               (let ((display-buffer-overriding-action '(display-buffer-no-window)))
+                                 (compile (concat "time " command)))))
           (let ((w (get-buffer-window buffer t)))
             (if (and w (not (eql (get-buffer-window) w)))
                 (with-selected-window w
@@ -337,7 +350,7 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
   (let* ((default-directory (tasklist-get-task-cwd task-id))
          (buffer-name (tasklist--task-buffer-name task-id))
          (command (tasklist--get-task-command task-id)))
-    (tasklist--invoke buffer-name command)))
+    (tasklist--invoke task-id buffer-name command)))
 
 (defun tasklist-delete-current-windows ()
   "Delete the compile/run windows for the current run configuration"
