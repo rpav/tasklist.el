@@ -280,7 +280,7 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
 
 (defun tasklist--display-buffer (task-id buffer-name)
   (let* ((display-type (tasklist--get-task-display-type task-id)))
-    (case display-type
+    (ecase display-type
       (split (tasklist--split-to-buffer buffer-name))
       (frame (tasklist--popup-buffer buffer-name))
       (none (tasklist--background-buffer buffer-name)))))
