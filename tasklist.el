@@ -329,7 +329,6 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
           (mapcar (lambda (w)
                     (set-window-point w (point-max)))
                   (get-buffer-window-list buffer-name nil t))
-          (visual-line-mode 1)
           (when tasklist-override-compile-keymap
             (use-local-map tasklist-run-keymap)))))))
 
