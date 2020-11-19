@@ -129,6 +129,9 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
   (define-key map (kbd "q") 'tasklist-quit-window)
   (define-key map (kbd "C-c C-c") 'tasklist-kill-buffer-process))
 
+(defun tasklist-string-subst (str)
+  (replace-regexp-in-string "\\([^\\]\\)%p" (concat "\\1" (tasklist-project-name)) str))
+
 (cl-defmacro tasklist--with-file ((filename &key readp writep) &body body)
   (declare (indent 1))
   `(with-temp-buffer
@@ -218,12 +221,12 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
 
 (defun tasklist--get-task-name (task-id)
   (let ((task (tasklist--get-task task-id)))
-    (or (cadr (assoc :name task))
+    (or (tasklist-string-subst (cadr (assoc :name task)))
         (symbol-name task-id))))
 
 (defun tasklist--get-task-window (task-id)
   (let ((task (tasklist--get-task task-id)))
-    (or (cadr (assoc :window task))
+    (or (tasklist-string-subst (cadr (assoc :window task)))
         (tasklist--get-task-name task-id))))
 
 (defun tasklist-get-task-cwd (task-id)
