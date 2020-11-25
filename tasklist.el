@@ -130,7 +130,8 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
   (define-key map (kbd "C-c C-c") 'tasklist-kill-buffer-process))
 
 (defun tasklist-string-subst (str)
-  (replace-regexp-in-string "\\([^\\]\\)%p" (concat "\\1" (tasklist-project-name)) str))
+  (when str
+    (replace-regexp-in-string "\\([^\\]\\)%p" (concat "\\1" (tasklist-project-name)) str)))
 
 (cl-defmacro tasklist--with-file ((filename &key readp writep) &body body)
   (declare (indent 1))
