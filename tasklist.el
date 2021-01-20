@@ -369,7 +369,9 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
 (defun tasklist--menu-tasks ()
   `((keymap nil
             ,@(mapcar (lambda (x)
-                        (list x 'menu-item (symbol-name (car x)) t))
+                        (let ((name (car x)))
+                          (list x 'menu-item
+                                (concat (tasklist--get-task-name name) " [" (symbol-name name) "]") t)))
                       (tasklist--get-tasks)))))
 
 
