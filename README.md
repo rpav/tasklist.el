@@ -6,7 +6,10 @@ Make a list of tasks (i.e. commands).  Run them in a window or in a separate fra
 ;;; This should be in a file named .tasklist.el in your project root.
 ;;; Nothing is eval'd.
 
-((tasks
+((common
+ (:cwd "...")
+ (:env "X=Y" "A=B" ...)
+ (tasks
   (build
    (:name "Build Project")
    (:command "make"))
@@ -38,6 +41,16 @@ There is also `:window`:
 ```
 
 This will call the *buffer* `*Task: Project/Name*`.  By using the same name for multiple tasks, you can cause the window to be shared/reused.  (By default, the given `:name` is used for each task.)
+
+To set environment variables, use `:env`:
+
+``` lisp
+(:env "VAR=VALUE" ...)
+```
+
+### Common
+
+The `common` section does what it likely implies: sets default values for all tasks.  Tasks may of course override these.  Currently, `:env`, `:cwd`, and `:window` are supported.
 
 ## Binding keys
 

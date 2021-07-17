@@ -187,9 +187,9 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
 
 (defun tasklist--validity ()
   (cond
-   ((not (tasklist--project-root)) :data-missing)
-   ((null (tasklist--get-project-data)) :data-missing)
-   (t t)))
+    ((not (tasklist--project-root)) :data-missing)
+    ((null (tasklist--get-project-data)) :data-missing)
+    (t t)))
 
 (defun tasklist--validate (&optional tag)
   (not
@@ -209,6 +209,10 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
 (defun tasklist--get-project-data ()
   (tasklist--read-project-data))
 
+(defun tasklist--get-common ()
+  (when (tasklist--project-root)
+    (cdr (assoc 'common (tasklist--get-project-data)))))
+
 (defun tasklist--get-tasks ()
   (when (tasklist--project-root)
     (cdr (assoc 'tasks (tasklist--get-project-data)))))
@@ -217,8 +221,11 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
   (cdr (assoc task (tasklist--get-tasks))))
 
 (defun tasklist--get-task-env (task-id)
-  (let ((task (tasklist--get-task task-id)))
-    (cdr (assoc :env task))))
+  (let ((task (tasklist--get-task task-id))
+        (common (tasklist--get-common)))
+    (append
+     (cdr (assoc :env task))
+     (cdr (assoc :env common)))))
 
 (defun tasklist--get-task-name (task-id)
   (let ((task (tasklist--get-task task-id)))
@@ -226,14 +233,19 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
         (symbol-name task-id))))
 
 (defun tasklist--get-task-window (task-id)
-  (let ((task (tasklist--get-task task-id)))
-    (or (tasklist-string-subst (cadr (assoc :window task)))
+  (let ((task (tasklist--get-task task-id))
+        (common (tasklist--get-common)))
+    (or (tasklist-string-subst
+         (or (cadr (assoc :window task))
+             (cadr (assoc :window common))))
         (tasklist--get-task-name task-id))))
 
 (defun tasklist-get-task-cwd (task-id)
   (let* ((task (tasklist--get-task task-id))
+         (common (tasklist--get-common))
          (root (tasklist--project-root))
-         (cwd (cadr (assoc :cwd task))))
+         (cwd (or (cadr (assoc :cwd task))
+                  (cadr (assoc :cwd common)))))
     (if cwd
         (if (file-name-absolute-p cwd)
             cwd
@@ -304,17 +316,19 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
               (cons (list buffer-name #'display-buffer-no-window)
                     display-buffer-alist)
             display-buffer-alist))
-         (actual-directory default-directory))
+         (actual-directory (tasklist-get-task-cwd task-id)))
     (if (get-buffer-process buffer)
         (message "Already running task in window: %s" buffer)
-      (with-current-buffer buffer
-        (setq-local compilation-directory actual-directory)
-        (setq-local default-directory actual-directory))
       ;; compile saves buffers; rely on this now
       (let* ((compilation-buffer-name-function (lambda (&rest r) buffer)))
         (cl-flet ((run-compile ()
-                               (let ((display-buffer-overriding-action '(display-buffer-no-window)))
-                                 (compile (concat "time " command)))))
+                    (let ((display-buffer-overriding-action '(display-buffer-no-window))
+                          (default-directory actual-directory)
+                          (compilation-directory actual-directory)
+                          (process-environment
+                           (append (tasklist--get-task-env task-id)
+                                   process-environment)))
+                      (compile (concat "time " command)))))
           (let ((w (get-buffer-window buffer t)))
             (if (and w (not (eql (get-buffer-window) w)))
                 (with-selected-window w
@@ -350,8 +364,7 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
     (let* ((tasks (tasklist--get-tasks))
            (choices (mapcar (lambda (x) (symbol-name (car x))) tasks)))
       (intern (ido-completing-read "Run task: " choices nil t nil nil nil)))))
-  (let* ((default-directory (tasklist-get-task-cwd task-id))
-         (buffer-name (tasklist--task-buffer-name task-id))
+  (let* ((buffer-name (tasklist--task-buffer-name task-id))
          (command (tasklist--get-task-command task-id)))
     (tasklist--invoke task-id buffer-name command)))
 
@@ -359,8 +372,8 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
   "Delete the compile/run windows for the current run configuration"
   (interactive)
   (cl-flet ((f (name)
-               (when-let ((b (get-buffer name)))
-                 (mapcar #'delete-window (get-buffer-window-list b nil t)))))
+              (when-let ((b (get-buffer name)))
+                (mapcar #'delete-window (get-buffer-window-list b nil t)))))
     (f (tasklist--task-buffer-name))
     (f (tasklist--run-buffer-name))))
 
@@ -378,14 +391,14 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
 (defun tasklist--menu ()
   `(,@(when (tasklist--get-tasks)
         (tasklist--menu-tasks))
-    (menu-item "--")
-    (:info menu-item "Project Info" t)
-    ;; Not used right now
-    ,@(when nil
-        (nil menu-item "Tools"
-             (keymap nil
-                     ;;(:set-buffer-local menu-item "Set buffer-local default task" t)
-                     )))))
+      (menu-item "--")
+      (:info menu-item "Project Info" t)
+      ;; Not used right now
+      ,@(when nil
+          (nil menu-item "Tools"
+               (keymap nil
+                       ;;(:set-buffer-local menu-item "Set buffer-local default task" t)
+                       )))))
 
 (defun tasklist--popup-menu ()
   (x-popup-menu
