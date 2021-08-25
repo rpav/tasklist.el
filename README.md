@@ -19,7 +19,7 @@ Make a list of tasks (i.e. commands).  Run them in a window or in a separate fra
    (:name "Build %project")
    (:command "make CC=%compiler BUILD=%build"))
   (run
-   (:name "Run Project")
+   (:name "Run %project")
    (:command "make" "run")
    (:cwd "bin"))))
 ```
