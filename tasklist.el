@@ -55,6 +55,12 @@ only applies if `tasklist-display-type` is frame."
   :type 'boolean
   :group 'tasklist)
 
+(defcustom tasklist-variable-alist nil
+  "An ALIST of variables to replace in strings.  Setting a variable `foo` will let you refer to it as `%foo` in
+most strings.  No lisp EVAL is performed!"
+  :type '(alist :key-type string :value-type string)
+  :group 'tasklist)
+
 (defcustom tasklist-override-compile-keymap t
   "Whether to use tasklist-run-keymap for the compile window as well.
 This more or less provides specific/consistent behavior for
@@ -134,8 +140,13 @@ will override any project, `tasklist-project-default` will only apply if no othe
   (define-key map (kbd "C-c C-c") 'tasklist-kill-buffer-process))
 
 (defun tasklist-string-subst (str)
-  (when str
-    (replace-regexp-in-string "\\([^\\]\\)%p" (concat "\\1" (tasklist-project-name)) str)))
+  (when (and str (string-match "\\([^\\]\\)%" str))
+    (cl-flet ((replace-one (s var value)
+                (replace-regexp-in-string (concat "\\([^\\]\\)%" (regexp-quote var)) (concat "\\1" value) s)))
+      (dolist (variable-list (tasklist--get-vars))
+        (dolist (var-value variable-list)
+          (setq str (replace-one str (car var-value) (cdr var-value)))))
+      str)))
 
 (cl-defmacro tasklist--with-file ((filename &key readp writep) &body body)
   (declare (indent 1))
@@ -227,6 +238,11 @@ will override any project, `tasklist-project-default` will only apply if no othe
   (when (tasklist--project-root)
     (cdr (assoc 'tasks (tasklist--get-project-data)))))
 
+(defun tasklist--get-vars ()
+  (let ((common (tasklist--get-common)))
+    (list (cdr (assoc :variables common))
+          tasklist-variable-alist)))
+
 (defun tasklist--get-task (task)
   (cdr (assoc task (tasklist--get-tasks))))
 
@@ -256,11 +272,12 @@ will override any project, `tasklist-project-default` will only apply if no othe
          (root (tasklist--project-root))
          (cwd (or (cadr (assoc :cwd task))
                   (cadr (assoc :cwd common)))))
-    (if cwd
-        (if (file-name-absolute-p cwd)
-            cwd
-          (concat root cwd))
-      root)))
+    (tasklist-string-subst
+     (if cwd
+         (if (file-name-absolute-p cwd)
+             cwd
+           (concat root cwd))
+       root))))
 
 (defun tasklist--get-task-display-type (task-id)
   (let ((task (tasklist--get-task task-id)))
@@ -270,7 +287,8 @@ will override any project, `tasklist-project-default` will only apply if no othe
 (defun tasklist--get-task-command (task-id)
   (let* ((task (tasklist--get-task task-id))
          (cmd (cdr (assoc :command task))))
-    (concat (car cmd) " " (cadr cmd))))
+    (tasklist-string-subst
+     (concat (car cmd) " " (cadr cmd)))))
 
 
 (defun tasklist--split-to-buffer (name)
@@ -332,9 +350,9 @@ will override any project, `tasklist-project-default` will only apply if no othe
       ;; compile saves buffers; rely on this now
       (let* ((compilation-buffer-name-function (lambda (&rest r) buffer)))
         (cl-flet ((run-compile ()
+                    (setq-local compilation-directory actual-directory)
                     (let ((display-buffer-overriding-action '(display-buffer-no-window))
                           (default-directory actual-directory)
-                          (compilation-directory actual-directory)
                           (process-environment
                            (append (tasklist--get-task-env task-id)
                                    process-environment)))

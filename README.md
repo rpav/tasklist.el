@@ -44,15 +44,37 @@ There is also `:window`:
 
 This will call the *buffer* `*Task: Project/Name*`.  By using the same name for multiple tasks, you can cause the window to be shared/reused.  (By default, the given `:name` is used for each task.)
 
-To set environment variables, use `:env`:
+### Environment Variables
+
+To set **environment** variables, use `:env`:
 
 ``` lisp
 (:env "VAR=VALUE" ...)
 ```
 
+### Tasklist Variable Substitution
+
+To set *tasklist.el* "variables,", use `:variables` (only supported in the `:common` section, see below):
+
+``` lisp
+(:variables
+  ("project" . "My Project")
+  ("build"   . "Debug")
+  ...)
+```
+
+These variables will be substituted in various strings throughout tasklist:
+
+``` lisp
+(:window "Testing %project")
+(:cwd "build/%compiler-%build/")
+```
+
+For a literal `%`, escape it as `\%`.
+
 ### Common
 
-The `common` section does what it likely implies: sets default values for all tasks.  Tasks may of course override these.  Currently, `:env`, `:cwd`, and `:window` are supported.
+The `common` section does what it likely implies: sets default values for all tasks.  Tasks may of course override these.  Currently, `:env`, `:cwd`, `:window`, and `:variables` are supported.
 
 ## Binding keys
 
