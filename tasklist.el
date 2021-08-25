@@ -79,9 +79,9 @@ quitting the frame or window."
   :group 'tasklist)
 
 (defcustom tasklist-split-threshold 40.0
-  "Threshold (percentage) at which to *not* split the current window,
-but instead use the other window.  That is, if `tasklist-run-window-size`
-is greater than this percentage of the current window, it will not be split."
+  "Threshold (percentage) at which to *not* split the current window, but instead use the other window.  That
+is, if `tasklist-run-window-size` is greater than this percentage of the current window, it will not be
+split."
   :type 'float
   :group 'tasklist)
 
@@ -94,8 +94,12 @@ is greater than this percentage of the current window, it will not be split."
 ;;; These are very temporary and likely very host-specific variables,
 ;;; not something we want to constantly modify in custom.el
 (defvar tasklist-project-root nil
-  "Optionally, set this to the emacs-wide root of the current project.  Setting this to NIL will
-use `projectile-project-root` to determine the root on a buffer-local basis, instead.")
+  "Optionally, set this to the emacs-wide root of the current project.  Setting this to NIL will use
+`projectile-project-root` to determine the root on a buffer-local basis, instead.")
+
+(defvar tasklist-project-default nil
+  "Optionally, set this to an emacs-wide root of a _default_ project.  Unlike `tasklist-project-root`, which
+will override any project, `tasklist-project-default` will only apply if no other project-root is found.")
 
 (defvar tasklist-run-keymap (make-sparse-keymap))
 
@@ -149,9 +153,15 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
   (declare (indent 1))
   `(tasklist--with-file (tasklist-local-options-file :readp ,readp :writep ,writep) ,@body))
 
+(defun tasklist--has-tasklist-el (path)
+  (when path
+    (and (file-exists-p (concat (file-name-as-directory path) ".tasklist.el"))
+         path)))
+
 (defun tasklist--project-root ()
-  (or tasklist-project-root
-      (projectile-project-root)))
+  (or (tasklist--has-tasklist-el tasklist-project-root)
+      (tasklist--has-tasklist-el (projectile-project-root))
+      (tasklist--has-tasklist-el tasklist-project-default)))
 
 (defun tasklist--maybe-remote-project-root ()
   "Return current project root path, suitable for remote invocations too."
@@ -355,8 +365,14 @@ use `projectile-project-root` to determine the root on a buffer-local basis, ins
    (list
     (let* ((default-directory (tasklist--project-root)))
       (read-directory-name "Task project root (blank to unset): "))))
-  (message "Path: %s" path)
   (setq tasklist-project-root (if (string= path "") nil path)))
+
+(defun tasklist-set-project-default (path)
+  (interactive
+   (list
+    (let* ((default-directory (tasklist--project-root)))
+      (read-directory-name "Task default project (blank to unset): "))))
+  (setq tasklist-project-default (if (string= path "") nil path)))
 
 (defun tasklist-run-task (&optional task-id)
   (interactive

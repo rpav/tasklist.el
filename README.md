@@ -23,6 +23,8 @@ Make a list of tasks (i.e. commands).  Run them in a window or in a separate fra
 
 * `tasklist-run`: Run a task
 * `tasklist-menu`: Pop up a menu with tasks
+* `tasklist-set-project-root`: Set global project override path
+* `tasklist-set-project-default`: Set project path to use if no other project is current
 
 ## Configuration
 
@@ -63,8 +65,6 @@ If you want to bind keys, you can put things in your `init.el` or wherever (but,
 ## Obviously
 
 This is more or less [cmake-build.el](https://github.com/rpav/cmake-build.el) with all the cmake stuff ripped out, and all the window and frame-handling things left .. which is a sizeable portion.
-
-(I've moved to using [Grunt](https://gruntjs.com/) and a (current-unreleased) custom grunt-cmake module to replace `cmake-build.el`, so build tasks and other non-cmake tasks can be unified and not editor-dependent.  This is the editor glue.)
 
 ## License
 
