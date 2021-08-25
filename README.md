@@ -7,8 +7,13 @@ Make a list of tasks (i.e. commands).  Run them in a window or in a separate fra
 ;;; Nothing is eval'd.
 
 ((common
- (:cwd "...")
- (:env "X=Y" "A=B" ...)
+  (:cwd "...")
+  (:env "X=Y" "A=B" ...)
+  (:variables
+   ("project"  . "Name")
+   ("build"    . "Debug")
+   ("compiler" . "gcc")
+   ...)
  (tasks
   (build
    (:name "Build Project")
