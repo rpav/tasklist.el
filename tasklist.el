@@ -145,8 +145,8 @@ will override any project, `tasklist-project-default` will only apply if no othe
                 (replace-regexp-in-string (concat "\\([^\\]\\)%" (regexp-quote var)) (concat "\\1" value) s)))
       (dolist (variable-list (tasklist--get-vars))
         (dolist (var-value variable-list)
-          (setq str (replace-one str (car var-value) (cdr var-value)))))
-      str)))
+          (setq str (replace-one str (car var-value) (cdr var-value)))))))
+  str)
 
 (cl-defmacro tasklist--with-file ((filename &key readp writep) &body body)
   (declare (indent 1))
@@ -287,9 +287,7 @@ will override any project, `tasklist-project-default` will only apply if no othe
 (defun tasklist--get-task-command (task-id)
   (let* ((task (tasklist--get-task task-id))
          (cmd (cdr (assoc :command task))))
-    (tasklist-string-subst
-     (concat (car cmd) " " (cadr cmd)))))
-
+    (tasklist-string-subst (string-join cmd " "))))
 
 (defun tasklist--split-to-buffer (name)
   (let* ((window-point-insertion-type t)
