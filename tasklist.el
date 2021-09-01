@@ -115,7 +115,7 @@ will override any project, `tasklist-project-default` will only apply if no othe
              (get-buffer-process (current-buffer)))
     (tasklist-kill-buffer-process))
   (if (= 1 (length (window-list)))
-      (case tasklist-quit-frame-type
+      (cl-case tasklist-quit-frame-type
         (lower (lower-frame))
         (delete (delete-frame)))
     (delete-window)))
@@ -126,7 +126,7 @@ will override any project, `tasklist-project-default` will only apply if no othe
          (p (get-buffer-process buffer)))
     (when p
       (with-current-buffer buffer
-        (case major-mode
+        (cl-case major-mode
           (shell-mode (kill-process p))
           (compilation-mode (kill-compilation)))))))
 
@@ -214,7 +214,7 @@ will override any project, `tasklist-project-default` will only apply if no othe
 
 (defun tasklist--validate (&optional tag)
   (not
-   (case (tasklist--validity)
+   (cl-case (tasklist--validity)
      (:data-missing
       (message "tasklist: Not a valid project; no .tasklist.el data found (project root is %s)"
                (tasklist--project-root)))
@@ -322,7 +322,7 @@ will override any project, `tasklist-project-default` will only apply if no othe
 
 (defun tasklist--display-buffer (task-id buffer-name)
   (let* ((display-type (tasklist--get-task-display-type task-id)))
-    (ecase display-type
+    (cl-ecase display-type
       (split (tasklist--split-to-buffer buffer-name))
       (frame (tasklist--popup-buffer buffer-name))
       (none (tasklist--background-buffer buffer-name)))))
@@ -438,7 +438,7 @@ will override any project, `tasklist-project-default` will only apply if no othe
    `(keymap "Task List" ,@(tasklist--menu))))
 
 (defun tasklist--menu-action-dispatch (action)
-  (case (car action)
+  (cl-case (car action)
     (:info (message "Project root: %s" (tasklist--project-root)))
     (:set-root (call-interactively #'tasklist-set-project-root))
     (otherwise (tasklist-run-task (car action)))))
