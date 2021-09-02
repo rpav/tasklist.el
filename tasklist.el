@@ -139,10 +139,14 @@ will override any project, `tasklist-project-default` will only apply if no othe
   (define-key map (kbd "q") 'tasklist-quit-window)
   (define-key map (kbd "C-c C-c") 'tasklist-kill-buffer-process))
 
-(defun tasklist-string-subst (str)
+(defun tasklist-string-subst (str &optional args)
   (when (and str (string-match "\\([^\\]\\)%" str))
     (cl-flet ((replace-one (s var value)
                 (replace-regexp-in-string (concat "\\([^\\]\\)%" (regexp-quote var)) (concat "\\1" value) s)))
+      (cl-loop
+            for i from 1
+            for p in args
+            do (setq str (replace-one str (number-to-string i) p)))
       (dolist (variable-list (tasklist--get-vars))
         (dolist (var-value variable-list)
           (setq str (replace-one str (car var-value) (cdr var-value)))))))
@@ -266,6 +270,10 @@ will override any project, `tasklist-project-default` will only apply if no othe
              (cadr (assoc :window common))))
         (tasklist--get-task-name task-id))))
 
+(defun tasklist--get-task-default-args (task-id)
+  (let ((task (tasklist--get-task task-id)))
+    (cdr (assoc :default-args task))))
+
 (defun tasklist-get-task-cwd (task-id)
   (let* ((task (tasklist--get-task task-id))
          (common (tasklist--get-common))
@@ -285,9 +293,13 @@ will override any project, `tasklist-project-default` will only apply if no othe
         tasklist-display-type)))
 
 (defun tasklist--get-task-command (task-id)
-  (let* ((task (tasklist--get-task task-id))
-         (cmd (cdr (assoc :command task))))
-    (tasklist-string-subst (string-join cmd " "))))
+  (let* ((task (tasklist--get-task task-id)))
+    (tasklist-string-subst (string-join (cdr (assoc :command task)) " ")
+                           (tasklist--get-task-default-args task-id))))
+
+(defun tasklist--compose-task-commands (task-id &optional deps)
+  (let* ((cmd (tasklist--get-task-command task-id)))
+    (list cmd)))
 
 (defun tasklist--split-to-buffer (name)
   (let* ((window-point-insertion-type t)
@@ -397,8 +409,10 @@ will override any project, `tasklist-project-default` will only apply if no othe
            (choices (mapcar (lambda (x) (symbol-name (car x))) tasks)))
       (intern (ido-completing-read "Run task: " choices nil t nil nil nil)))))
   (let* ((buffer-name (tasklist--task-buffer-name task-id))
-         (command (tasklist--get-task-command task-id)))
-    (tasklist--invoke task-id buffer-name command)))
+         (command-list (tasklist--compose-task-commands task-id)))
+    (mapcar (lambda (cmd)
+              (tasklist--invoke task-id buffer-name cmd))
+            command-list)))
 
 (defun tasklist-delete-current-windows ()
   "Delete the compile/run windows for the current run configuration"
