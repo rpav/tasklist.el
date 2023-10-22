@@ -287,6 +287,13 @@ will override any project, `tasklist-project-default` will only apply if no othe
            (concat root cwd))
        root))))
 
+(defun tasklist--get-task-shell (task-id)
+  (let* ((task (tasklist--get-task task-id))
+         (common (tasklist--get-common))
+         (shell (or (cadr (assoc :shell task))
+                    (cadr (assoc :shell common)))))
+    (tasklist-string-subst shell)))
+
 (defun tasklist--get-task-display-type (task-id)
   (let ((task (tasklist--get-task task-id)))
     (or (cadr (assoc :display task))
@@ -316,7 +323,8 @@ will override any project, `tasklist-project-default` will only apply if no othe
       (when (and (not (get-buffer-window name t)))
         (let ((window (split-window-below (- tasklist-run-window-size))))
           (set-window-buffer window buffer)
-          (set-window-dedicated-p window t)))
+          ;;(set-window-dedicated-p window t)
+          ))
       t)))
 
 (defun tasklist--popup-buffer (name)
@@ -354,7 +362,11 @@ will override any project, `tasklist-project-default` will only apply if no othe
               (cons (list buffer-name #'display-buffer-no-window)
                     display-buffer-alist)
             display-buffer-alist))
-         (actual-directory (tasklist-get-task-cwd task-id)))
+         (actual-directory (tasklist-get-task-cwd task-id))
+         (shell (tasklist--get-task-shell task-id))
+         (command (if shell
+                      (replace-regexp-in-string "\\([^\\]\\)%s" (concat "\\1" command) shell)
+                    command)))
     (if (get-buffer-process buffer)
         (message "Already running task in window: %s" buffer)
       ;; compile saves buffers; rely on this now
